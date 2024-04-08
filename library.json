@@ -1,0 +1,25 @@
+{
+  "name": "libina260",
+  "version": "0.1.0",
+  "description": "Portable TI INA260 power, voltage, and current sensor driver (I²C)",
+  "keywords": "power, voltage, current, sensor, i2c, driver, library, c++, c++17, constexpr",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/ardnew/libina260"
+  },
+  "authors":
+  [
+    {
+      "name": "ardnew",
+      "email": "andrew@ardnew.com",
+      "url": "https://github.com/ardnew",
+      "maintainer": true
+    }
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/ardnew/libina260",
+  "dependencies": {},
+  "frameworks": "*",
+  "platforms": "*"
+}
