@@ -1,6 +1,6 @@
 {
   "name": "libpvc",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Platform-independent I²C driver for INA260 power/voltage/current sensor",
   "keywords": "power, voltage, current, sensor, i2c, driver, library, c++, c++17, constexpr",
   "repository":
@@ -22,7 +22,7 @@
   "frameworks": "*",
   "platforms": "*",
   "dependencies": {
-    "ardnew/byte-order": "^0.3.0",
+    "ardnew/byte-order": "^0.3.0"
   },
   "headers": [
     "pvc.hpp",
