@@ -23,7 +23,6 @@
   "platforms": "*",
   "dependencies": {
     "ardnew/byte-order": "^0.3.0",
-    "ardnew/cronos": "^0.2.1"
   },
   "headers": [
     "pvc.hpp",
