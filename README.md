@@ -18,7 +18,7 @@ Datasheet: http://www.ti.com/lit/ds/symlink/ina260.pdf
 
 ## Design
 
-This library is composed of C++ header files that represent [various layers](https://en.wikipedia.org/wiki/Abstraction_layer) of [hardware abstraction](https://en.wikipedia.org/wiki/Hardware_abstraction).
+This library is composed of C++17 header files that represent [various layers](https://en.wikipedia.org/wiki/Abstraction_layer) of [hardware abstraction](https://en.wikipedia.org/wiki/Hardware_abstraction).
 
 |Header|Endpoint|Abstraction|Description|
 |:-----|:------:|:---------:|:----------|
@@ -26,6 +26,10 @@ This library is composed of C++ header files that represent [various layers](htt
 |[`ina260.hpp`](include/ina260.hpp)|Peripheral|TI INA260|INA260 programming interface (memory map, register addresses, etc.)|
 |[`pvc/i2c.hpp`](include/pvc/i2c.hpp)|Controller|I²C communication|General-purpose I²C controller interface|
 |[`pvc/arduino.hpp`](include/pvc/arduino.hpp)|Controller|I²C processor|Arduino reference implementation of I²C controller adapter|
+
+#### Notes
+
+This library uses C++ language features that are only available with C++17 or newer (`constexpr`, `auto`, etc.). Ensure your compiler and toolchain support this standard — **many do not**. With GCC, for example, you could use `-std=gnu++17` or `-std=c++17` or something newer.
 
 ## Reference Platform
 
