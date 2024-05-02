@@ -75,7 +75,7 @@ public:
     return true;
   }
 
-  bool write_config(const ina260::config &config) {
+  bool write_config(const ina260::config config) {
     uint16_t u = bytes::reorder(config.u16);
     auto nw = _i2c->write(
       static_cast<std::uint8_t>(ina260::reg::configuration), &u, sizeof(u));
@@ -97,7 +97,7 @@ public:
     return true;
   }
 
-  bool write_masken(const ina260::masken &masken) {
+  bool write_masken(const ina260::masken masken) {
     uint16_t u = bytes::reorder(masken.u16);
     auto nw = _i2c->write(
       static_cast<std::uint8_t>(ina260::reg::mask_enable), &u, sizeof(u));
@@ -119,7 +119,7 @@ public:
     return true;
   }
 
-  bool write_alimit(const ina260::alimit &alimit) {
+  bool write_alimit(const ina260::alimit alimit) {
     uint16_t u = bytes::reorder(alimit.u16);
     auto nw = _i2c->write(
       static_cast<std::uint8_t>(ina260::reg::alert_limit), &u, sizeof(u));
@@ -130,7 +130,9 @@ public:
     return true;
   }
 
-  bool voltage(double &v) {
+  template <typename T,
+    typename std::enable_if_t<std::is_arithmetic_v<T>>* = nullptr>
+  bool voltage(T &v) {
     uint16_t u = 0;
     auto nr = _i2c->read(
       static_cast<std::uint8_t>(ina260::reg::voltage), &u, sizeof(u));
@@ -141,7 +143,9 @@ public:
     return true;
   }
 
-  bool current(double &i) {
+  template <typename T,
+    typename std::enable_if_t<std::is_arithmetic_v<T>>* = nullptr>
+  bool current(T &i) {
     uint16_t u = 0;
     auto nr = _i2c->read(
       static_cast<std::uint8_t>(ina260::reg::current), &u, sizeof(u));
@@ -152,7 +156,9 @@ public:
     return true;
   }
 
-  bool power(double &p) {
+  template <typename T,
+    typename std::enable_if_t<std::is_arithmetic_v<T>>* = nullptr>
+  bool power(T &p) {
     uint16_t u = 0;
     auto nr = _i2c->read(
       static_cast<std::uint8_t>(ina260::reg::power), &u, sizeof(u));
@@ -162,13 +168,5 @@ public:
     p = ina260::lsb_power * bytes::reorder(u);
     return true;
   }
-
-  //int getVoltage(double *V_);
-  //int getCurrent(double *I_);
-  //int getPower(double *P_);
-  //int setConfig(unsigned short val);
-  //int setAlert(unsigned short val1);
-  //void readAlert(void);
-  //int setLim(unsigned short val2);
 
 }; // class pvc

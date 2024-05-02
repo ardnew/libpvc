@@ -1,7 +1,7 @@
 # libpvc
-##### Platform-independent I²C driver for INA260 power/voltage/current sensor
+##### Platform-independent I²C driver for INA260 power/voltage/current sensor ([datasheet](docs/ina260.pdf))
 
-Datasheet: http://www.ti.com/lit/ds/symlink/ina260.pdf
+![MAX POWER](docs/max-power.jpg)
 
 ---
 
@@ -43,7 +43,7 @@ The library uses a [platform-agnostic I²C interface](include/pvc/i2c.hpp) so th
 
 An [example adapter](include/pvc/arduino.hpp) is included for reference using the [Wire library from the Arduino core API](https://www.arduino.cc/reference/en/language/functions/communication/wire/).
 
-Using the INA260 driver on Arduino could look like the following:
+Using the INA260 driver on Arduino could look as simple as the following. But, please, refer to [the example](examples/platformio/src/main.cpp) for a more complete reference with comments and sensor configuration.
 
 ```c++
 #include <Arduino.h>
@@ -51,32 +51,33 @@ Using the INA260 driver on Arduino could look like the following:
 #include "pvc.hpp"
 
 // Declare a pvc driver instance that uses the Arduino adapter
-pvc<arduino::i2c> *sensor;
+pvc<arduino::i2c> sensor(new arduino::i2c(0));
 
 // Pair a sensor measurement with its validity flag
 struct measure { bool valid; float value; };
 
 void setup() {
-  // Instantiate and initialize the driver
-  sensor = new pvc(new arduino::i2c(0));
-  if (sensor->init()) {
-    while (!sensor->ready()) { delay(200); }
-  }
+  while (!sensor.init() || !sensor.ready()) 
+    { delay(200); }
 }
 
 void loop() {
   static measure voltage, current, power;
+  static char    output[256];
 
   // Read the sensor values continuously
-  voltage.valid = sensor->voltage(voltage.value);
-  current.valid = sensor->current(current.value);
-  power.valid   = sensor->power(power.value);
+  voltage.valid = sensor.voltage(voltage.value);
+  current.valid = sensor.current(current.value);
+  power.valid   = sensor.power(power.value);
 
   // Print each measurement (validity indicator: "==" vs. "!=")
-  Serial.printf("{ V%c=%9.2f\tI%c=%9.2f\tP%c=%9.2f\r\n",
+  snprintf(output, sizeof(output) / sizeof(*output),
+    "V %c= %-9.2f\tI %c= %-9.2f\tP %c= %-9.2f",
     ( voltage.valid ? '=' : '!' ), voltage.value,
     ( current.valid ? '=' : '!' ), current.value,
     ( power.valid   ? '=' : '!' ), power.value);
+
+  Serial.println(output);
 }
 
 ```

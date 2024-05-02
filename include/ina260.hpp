@@ -20,9 +20,9 @@ namespace ina260 {
   );
 
   // Units of measurement / values of LSB / units of least precision (ULP)
-  constexpr double lsb_current =  1.25;
-  constexpr double lsb_voltage =  1.25;
-  constexpr double lsb_power   = 10.00;
+  constexpr auto lsb_current =  1.25;
+  constexpr auto lsb_voltage =  1.25;
+  constexpr auto lsb_power   = 10.00;
 
   // Configuration and data register addresses.
   enum class reg : std::uint8_t {
