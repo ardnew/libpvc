@@ -4,31 +4,21 @@
 #include <type_traits>
 #include <utility>
 
-#include <bytes.hpp>
-
 #ifdef ARDUINO
-#include "pvc/arduino.hpp"
-using i2c = arduino::i2c; // Use the Arduino I²C implementation
+#include "pvc/i2c_arduino.hpp"
+using I2C = arduino::I2C; // Use the Arduino I²C implementation
 #else
-#error "Unsupported platform"
+#include "pvc/i2c_espidf.hpp"
+using I2C = espidf::I2C; // Use the ESP-IDF I²C implementation
 #endif
 
 #include "ina260.hpp"
 
-template <typename I = i2c>
+template <typename I = I2C>
 class pvc {
-private:
+public:
   using interface = I;
 
-  interface     *_i2c;
-  std::uint8_t   _addr;
-  std::uint32_t  _freq;
-
-  ina260::config _config;
-  ina260::masken _masken;
-  ina260::alimit _alimit;
-
-public:
   pvc(interface *i2c,
     const std::uint8_t   addr = ina260::default_addr_id,
     const std::uint32_t  freq = ina260::default_freq_hz,
@@ -55,31 +45,31 @@ public:
 
   // Check if the sensor is responding over I²C as expected.
   bool ready() {
-    uint16_t u = 0;
+    std::uint16_t u = 0;
     auto nr = _i2c->read(
-      static_cast<std::uint8_t>(ina260::reg::device_id), &u, sizeof(u));
+      static_cast<std::uint8_t>(ina260::reg::device_id), u, sizeof(u));
     if (nr != sizeof(u)) {
       return false;
     }
-    return ina260::device().u16 == bytes::reorder(u);
+    return ina260::device().u16 == u;
   }
 
   bool read_config(ina260::config &config) {
-    uint16_t u = 0;
+    std::uint16_t u = 0;
     auto nr = _i2c->read(
-      static_cast<std::uint8_t>(ina260::reg::configuration), &u, sizeof(u));
+      static_cast<std::uint8_t>(ina260::reg::configuration), u, sizeof(u));
     if (nr != sizeof(u)) {
       return false;
     }
-    config.u16 = bytes::reorder(u);
+    config.u16 = u;
     return true;
   }
 
   bool write_config(const ina260::config config) {
-    uint16_t u = bytes::reorder(config.u16);
     auto nw = _i2c->write(
-      static_cast<std::uint8_t>(ina260::reg::configuration), &u, sizeof(u));
-    if (nw != sizeof(u)) {
+      static_cast<std::uint8_t>(ina260::reg::configuration),
+      config.u16, sizeof(config.u16));
+    if (nw != sizeof(config.u16)) {
       return false;
     }
     _config.u16 = config.u16;
@@ -87,21 +77,21 @@ public:
   }
 
   bool read_masken(ina260::masken &masken) {
-    uint16_t u = 0;
+    std::uint16_t u = 0;
     auto nr = _i2c->read(
-      static_cast<std::uint8_t>(ina260::reg::mask_enable), &u, sizeof(u));
+      static_cast<std::uint8_t>(ina260::reg::mask_enable), u, sizeof(u));
     if (nr != sizeof(u)) {
       return false;
     }
-    masken.u16 = bytes::reorder(u);
+    masken.u16 = u;
     return true;
   }
 
   bool write_masken(const ina260::masken masken) {
-    uint16_t u = bytes::reorder(masken.u16);
     auto nw = _i2c->write(
-      static_cast<std::uint8_t>(ina260::reg::mask_enable), &u, sizeof(u));
-    if (nw != sizeof(u)) {
+      static_cast<std::uint8_t>(ina260::reg::mask_enable),
+      masken.u16, sizeof(masken.u16));
+    if (nw != sizeof(masken.u16)) {
       return false;
     }
     _masken.u16 = masken.u16;
@@ -109,21 +99,21 @@ public:
   }
 
   bool read_alimit(ina260::alimit &alimit) {
-    uint16_t u = 0;
+    std::uint16_t u = 0;
     auto nr = _i2c->read(
-      static_cast<std::uint8_t>(ina260::reg::alert_limit), &u, sizeof(u));
+      static_cast<std::uint8_t>(ina260::reg::alert_limit), u, sizeof(u));
     if (nr != sizeof(u)) {
       return false;
     }
-    alimit.u16 = bytes::reorder(u);
+    alimit.u16 = u;
     return true;
   }
 
   bool write_alimit(const ina260::alimit alimit) {
-    uint16_t u = bytes::reorder(alimit.u16);
     auto nw = _i2c->write(
-      static_cast<std::uint8_t>(ina260::reg::alert_limit), &u, sizeof(u));
-    if (nw != sizeof(u)) {
+      static_cast<std::uint8_t>(ina260::reg::alert_limit),
+      alimit.u16, sizeof(alimit.u16));
+    if (nw != sizeof(alimit.u16)) {
       return false;
     }
     _alimit.u16 = alimit.u16;
@@ -133,40 +123,49 @@ public:
   template <typename T,
     typename std::enable_if_t<std::is_arithmetic_v<T>>* = nullptr>
   bool voltage(T &v) {
-    uint16_t u = 0;
+    std::uint16_t u = 0;
     auto nr = _i2c->read(
-      static_cast<std::uint8_t>(ina260::reg::voltage), &u, sizeof(u));
+      static_cast<std::uint8_t>(ina260::reg::voltage), u, sizeof(u));
     if (nr != sizeof(u)) {
       return false;
     }
-    v = ina260::lsb_voltage * bytes::reorder(u);
+    v = ina260::lsb_voltage * u;
     return true;
   }
 
   template <typename T,
     typename std::enable_if_t<std::is_arithmetic_v<T>>* = nullptr>
   bool current(T &i) {
-    uint16_t u = 0;
+    std::uint16_t u = 0;
     auto nr = _i2c->read(
-      static_cast<std::uint8_t>(ina260::reg::current), &u, sizeof(u));
+      static_cast<std::uint8_t>(ina260::reg::current), u, sizeof(u));
     if (nr != sizeof(u)) {
       return false;
     }
-    i = ina260::lsb_current * bytes::reorder(u);
+    i = ina260::lsb_current * u;
     return true;
   }
 
   template <typename T,
     typename std::enable_if_t<std::is_arithmetic_v<T>>* = nullptr>
   bool power(T &p) {
-    uint16_t u = 0;
+    std::uint16_t u = 0;
     auto nr = _i2c->read(
-      static_cast<std::uint8_t>(ina260::reg::power), &u, sizeof(u));
+      static_cast<std::uint8_t>(ina260::reg::power), u, sizeof(u));
     if (nr != sizeof(u)) {
       return false;
     }
-    p = ina260::lsb_power * bytes::reorder(u);
+    p = ina260::lsb_power * u;
     return true;
   }
+
+private:
+  interface     *_i2c;
+  std::uint8_t   _addr;
+  std::uint32_t  _freq;
+
+  ina260::config _config;
+  ina260::masken _masken;
+  ina260::alimit _alimit;
 
 }; // class pvc

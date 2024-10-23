@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "pvc/arduino.hpp"
+#include "pvc/i2c_arduino.hpp"
 #include "pvc.hpp"
 
 // Declare a pvc driver instance that uses the Arduino adapter.
