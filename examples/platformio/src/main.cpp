@@ -4,7 +4,7 @@
 
 // Declare a pvc driver instance that uses the Arduino adapter.
 // Bus 0 is the same as the default Wire object (e.g., use i2c(1) for Wire1).
-pvc<arduino::i2c> sensor(new arduino::i2c(0));
+pvc<arduino::I2C> sensor(new arduino::I2C(0));
 
 // (optional) Initialize INA260 configuration settings:
 //

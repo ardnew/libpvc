@@ -1,16 +1,16 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
+#include <cstring>
 
 #include <Wire.h>
-
-#include <bytes.hpp>
 
 #include "pvc/i2c.hpp"
 
 namespace arduino {
 
-class I2C: public proto::I2C<>, public TwoWire {
+class I2C: public proto::I2C, public TwoWire {
 public:
   // Construct a concrete I²C controller with the given bus and I/O pins.
   I2C(const std::uint8_t bus = 0, const std::int16_t sda = -1, const std::int16_t scl = -1)
@@ -34,11 +34,12 @@ public:
 
   // Write data with the given number of bytes to the specified memory address,
   // and return the number of bytes successfully written.
-  std::size_t write(const std::uint8_t addr, const std::uint16_t data, const std::size_t size) override {
+  std::size_t write(const std::uint8_t addr, const std::uint8_t * const &data, const std::size_t size) override {
     TwoWire::beginTransmission(_addr);
-    (void)TwoWire::write(static_cast<const uint8_t *>(&addr), sizeof(addr));
-    std::uint16_t u = bytes::reorder(data);
-    std::size_t count = TwoWire::write(static_cast<const uint8_t *>(&u), size);
+    (void)TwoWire::write(&addr, sizeof(addr));
+    std::uint8_t u[size] = { 0 };
+    std::reverse_copy(data, data + size, u);
+    std::size_t count = TwoWire::write(u, size);
     if (TwoWire::endTransmission()) {
       return 0;
     }
@@ -47,19 +48,19 @@ public:
 
   // Read the given number of bytes from the specified memory address, and
   // return the number of bytes successfully read.
-  std::size_t read(const std::uint8_t addr, std::uint16_t &data, const std::size_t size) override {
+  std::size_t read(const std::uint8_t addr, std::uint8_t * const &data, const std::size_t size) override {
     TwoWire::beginTransmission(_addr);
-    (void)TwoWire::write(static_cast<const uint8_t *>(&addr), sizeof(addr));
+    (void)TwoWire::write(&addr, sizeof(addr));
     if (TwoWire::endTransmission(true)) {
       return 0;
     }
     (void)TwoWire::requestFrom(_addr, size, false);
     std::size_t count = 0;
-    std::uint16_t u = 0;
+    std::uint8_t u[size] = { 0 };
     while (count < size && TwoWire::available()) {
-      static_cast<uint8_t *>(&u)[count++] = TwoWire::read();
+      u[count++] = TwoWire::read();
     }
-    data = bytes::reorder(u);
+    std::reverse_copy(u, u + count, data);
     return count;
   }
 

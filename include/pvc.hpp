@@ -45,30 +45,34 @@ public:
 
   // Check if the sensor is responding over I²C as expected.
   bool ready() {
-    std::uint16_t u = 0;
+    std::uint8_t u[2] = { 0 };
     auto nr = _i2c->read(
-      static_cast<std::uint8_t>(ina260::reg::device_id), u, sizeof(u));
+      static_cast<std::uint8_t>(ina260::reg::device_id), u, sizeof(u)
+    );
     if (nr != sizeof(u)) {
       return false;
     }
-    return ina260::device().u16 == u;
+    return ina260::device() == u; // overloaded operator==
   }
 
   bool read_config(ina260::config &config) {
-    std::uint16_t u = 0;
+    std::uint8_t u[2] = { 0 };
     auto nr = _i2c->read(
-      static_cast<std::uint8_t>(ina260::reg::configuration), u, sizeof(u));
+      static_cast<std::uint8_t>(ina260::reg::configuration), u, sizeof(u)
+    );
     if (nr != sizeof(u)) {
       return false;
     }
-    config.u16 = u;
+    std::memcpy(&config.u16, u, sizeof(u));
     return true;
   }
 
-  bool write_config(const ina260::config config) {
+  bool write_config(const ina260::config &config) {
+    std::uint8_t u[sizeof(config.u16)] = { 0 };
+    std::memcpy(u, &config.u16, sizeof(u));
     auto nw = _i2c->write(
-      static_cast<std::uint8_t>(ina260::reg::configuration),
-      config.u16, sizeof(config.u16));
+      static_cast<std::uint8_t>(ina260::reg::configuration), u, sizeof(u)
+    );
     if (nw != sizeof(config.u16)) {
       return false;
     }
@@ -77,20 +81,23 @@ public:
   }
 
   bool read_masken(ina260::masken &masken) {
-    std::uint16_t u = 0;
+    std::uint8_t u[2] = { 0 };
     auto nr = _i2c->read(
-      static_cast<std::uint8_t>(ina260::reg::mask_enable), u, sizeof(u));
+      static_cast<std::uint8_t>(ina260::reg::mask_enable), u, sizeof(u)
+    );
     if (nr != sizeof(u)) {
       return false;
     }
-    masken.u16 = u;
+    std::memcpy(&masken.u16, u, sizeof(u));
     return true;
   }
 
-  bool write_masken(const ina260::masken masken) {
+  bool write_masken(const ina260::masken &masken) {
+    std::uint8_t u[sizeof(masken.u16)] = { 0 };
+    std::memcpy(u, &masken.u16, sizeof(u));
     auto nw = _i2c->write(
-      static_cast<std::uint8_t>(ina260::reg::mask_enable),
-      masken.u16, sizeof(masken.u16));
+      static_cast<std::uint8_t>(ina260::reg::mask_enable), u, sizeof(u)
+    );
     if (nw != sizeof(masken.u16)) {
       return false;
     }
@@ -99,20 +106,23 @@ public:
   }
 
   bool read_alimit(ina260::alimit &alimit) {
-    std::uint16_t u = 0;
+    std::uint8_t u[2] = { 0 };
     auto nr = _i2c->read(
-      static_cast<std::uint8_t>(ina260::reg::alert_limit), u, sizeof(u));
+      static_cast<std::uint8_t>(ina260::reg::alert_limit), u, sizeof(u)
+    );
     if (nr != sizeof(u)) {
       return false;
     }
-    alimit.u16 = u;
+    std::memcpy(&alimit.u16, u, sizeof(u));
     return true;
   }
 
-  bool write_alimit(const ina260::alimit alimit) {
+  bool write_alimit(const ina260::alimit &alimit) {
+    std::uint8_t u[sizeof(alimit.u16)] = { 0 };
+    std::memcpy(u, &alimit.u16, sizeof(u));
     auto nw = _i2c->write(
-      static_cast<std::uint8_t>(ina260::reg::alert_limit),
-      alimit.u16, sizeof(alimit.u16));
+      static_cast<std::uint8_t>(ina260::reg::alert_limit), u, sizeof(u)
+    );
     if (nw != sizeof(alimit.u16)) {
       return false;
     }
@@ -123,39 +133,48 @@ public:
   template <typename T,
     typename std::enable_if_t<std::is_arithmetic_v<T>>* = nullptr>
   bool voltage(T &v) {
-    std::uint16_t u = 0;
+    std::uint8_t u[2] = { 0 };
     auto nr = _i2c->read(
-      static_cast<std::uint8_t>(ina260::reg::voltage), u, sizeof(u));
+      static_cast<std::uint8_t>(ina260::reg::voltage), u, sizeof(u)
+    );
     if (nr != sizeof(u)) {
       return false;
     }
-    v = ina260::lsb_voltage * u;
+    std::uint16_t u16 = 0;
+    std::memcpy(&u16, u, sizeof(u));
+    v = ina260::lsb_voltage * u16;
     return true;
   }
 
   template <typename T,
     typename std::enable_if_t<std::is_arithmetic_v<T>>* = nullptr>
   bool current(T &i) {
-    std::uint16_t u = 0;
+    std::uint8_t u[2] = { 0 };
     auto nr = _i2c->read(
-      static_cast<std::uint8_t>(ina260::reg::current), u, sizeof(u));
+      static_cast<std::uint8_t>(ina260::reg::current), u, sizeof(u)
+    );
     if (nr != sizeof(u)) {
       return false;
     }
-    i = ina260::lsb_current * u;
+    std::uint16_t u16 = 0;
+    std::memcpy(&u16, u, sizeof(u));
+    i = ina260::lsb_current * u16;
     return true;
   }
 
   template <typename T,
     typename std::enable_if_t<std::is_arithmetic_v<T>>* = nullptr>
   bool power(T &p) {
-    std::uint16_t u = 0;
+    std::uint8_t u[2] = { 0 };
     auto nr = _i2c->read(
-      static_cast<std::uint8_t>(ina260::reg::power), u, sizeof(u));
+      static_cast<std::uint8_t>(ina260::reg::power), u, sizeof(u)
+    );
     if (nr != sizeof(u)) {
       return false;
     }
-    p = ina260::lsb_power * u;
+    std::uint16_t u16 = 0;
+    std::memcpy(&u16, u, sizeof(u));
+    p = ina260::lsb_power * u16;
     return true;
   }
 

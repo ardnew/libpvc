@@ -1,17 +1,16 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 
 #include <driver/i2c_master.h>
 
-#include <bytes.hpp>
-
 #include "pvc/i2c.hpp"
 
 namespace espidf {
 
-class I2C: public proto::I2C<> {
+class I2C: public proto::I2C {
 public:
   struct Config {
     i2c_master_bus_config_t bus;
@@ -59,10 +58,9 @@ public:
 
   // Write data with the given number of bytes to the specified memory address,
   // and return the number of bytes successfully written.
-  std::size_t write(const std::uint8_t addr, const std::uint16_t data, const std::size_t size) override {
-    std::uint8_t buf[size + sizeof(1)] = { addr };
-    std::uint16_t u = bytes::reorder(data);
-    std::memcpy(&buf[1], &u, size);
+  std::size_t write(const std::uint8_t addr, const std::uint8_t * const &data, const std::size_t size) override {
+    std::uint8_t buf[size + sizeof(addr)] = { addr };
+    std::reverse_copy(data, data + size, buf + 1);
     if (ESP_OK == i2c_master_transmit(_hdl.dev, buf, size + 1, -1)) {
       return size;
     }
@@ -71,12 +69,10 @@ public:
 
   // Read the given number of bytes from the specified memory address, and
   // return the number of bytes successfully read.
-  std::size_t read(const std::uint8_t addr, std::uint16_t &data, const std::size_t size) override {
+  std::size_t read(const std::uint8_t addr, std::uint8_t * const &data, const std::size_t size) override {
     std::uint8_t buf[size] = { 0 };
     if (ESP_OK == i2c_master_transmit_receive(_hdl.dev, &addr, sizeof(addr), buf, size, -1)) {
-      std::uint16_t u = 0;
-      std::memcpy(&u, buf, size);
-      data = bytes::reorder(u);
+      std::reverse_copy(buf, buf + size, data);
       return size;
     }
     return 0;

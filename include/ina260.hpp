@@ -18,7 +18,6 @@ namespace ina260 {
     1000000U, //   1.00 MHz · fast mode plus (Fm+)
     2940000U  //   2.94 MHz · high-speed mode (Hs)
   );
-
   // Units of measurement / values of LSB / units of least precision (ULP)
   constexpr auto lsb_current =  1.25;
   constexpr auto lsb_voltage =  1.25;
@@ -36,7 +35,11 @@ namespace ina260 {
     device_id     = 0xFF,
   };
 
-  // Format of the CONFIGURATION register (00h)
+  // Contents of DEVICE_ID register (FFh)
+  constexpr std::uint8_t  default_revision = 0x00;
+  constexpr std::uint16_t default_deviceid = 0x227;
+
+  // Format of the CONFIGURATION register (00h)22
   struct config {
 
     // Which measurements are performed for each conversion.
@@ -218,12 +221,21 @@ namespace ina260 {
       const std::uint16_t mask = ~reserved_mask)
       : u16(value & mask) {}
     constexpr device(
-      const std::uint8_t revision = 0x00,
-      const std::uint16_t deviceid = 0x227)
+      const std::uint8_t revision = default_revision,
+      const std::uint16_t deviceid = default_deviceid)
       : revision(revision),
         deviceid(deviceid) {}
 
     virtual ~device() {}
+
+    constexpr bool operator==(std::uint8_t (&p)[sizeof(u16)]) const {
+      for (std::size_t i = 0; i < sizeof(u16); ++i) {
+        if (p[i] != static_cast<std::uint8_t>(u16 >> (i << 3))) {
+          return false;
+        }
+      }
+      return true;
+    }
 
   }; // struct device
 
