@@ -2,8 +2,11 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string_view>
 
 #include "pvc/internal/util.hpp"
+
+using namespace std::literals;
 
 namespace ina260 {
 
@@ -102,11 +105,11 @@ namespace ina260 {
       const std::uint16_t mask = ~reserved_mask)
       : u16(value & mask) {}
     constexpr config(
-      const op_type   type  = config::op_type::power,
-      const op_mode   mode  = config::op_mode::continuous,
-      const adc_time  ctime = config::adc_time::ms1p1,
-      const adc_time  vtime = config::adc_time::ms1p1,
-      const adc_count count = config::adc_count::n1,
+      const op_type   type  = op_type::power,
+      const op_mode   mode  = op_mode::continuous,
+      const adc_time  ctime = adc_time::ms1p1,
+      const adc_time  vtime = adc_time::ms1p1,
+      const adc_count count = adc_count::n1,
       const bool      reset = false)
       : type(type),
         mode(mode),
@@ -118,6 +121,60 @@ namespace ina260 {
 
     virtual ~config() {}
 
+    static constexpr const char * to_string(const op_type &value) {
+      switch (value) {
+        case op_type::shutdown: return "shutdown";
+        case op_type::current:  return "current";
+        case op_type::voltage:  return "voltage";
+        case op_type::power:    return "power";
+        default: return "unknown";
+      }
+    }
+
+    static constexpr const char * to_string(const op_mode &value) {
+      switch (value) {
+        case op_mode::triggered:  return "triggered";
+        case op_mode::continuous: return "continuous";
+        default: return "unknown";
+      }
+    }
+
+    static constexpr const char * to_string(const adc_time &value) {
+      switch (value) {
+        case adc_time::us140:    return "140 µs";
+        case adc_time::us204:    return "204 µs";
+        case adc_time::us332:    return "332 µs";
+        case adc_time::us588:    return "588 µs";
+        case adc_time::ms1p1:    return "1.1 ms";
+        case adc_time::ms2p116:  return "2.116 ms";
+        case adc_time::ms4p156:  return "4.156 ms";
+        case adc_time::ms8p244:  return "8.244 ms";
+        default: return "unknown";
+      }
+    }
+
+    static constexpr const char * to_string(const adc_count &value) {
+      switch (value) {
+        case adc_count::n1:    return "1x";
+        case adc_count::n4:    return "4x";
+        case adc_count::n16:   return "16x";
+        case adc_count::n64:   return "64x";
+        case adc_count::n128:  return "128x";
+        case adc_count::n256:  return "256x";
+        case adc_count::n512:  return "512x";
+        case adc_count::n1024: return "1024x";
+        default: return "unknown";
+      }
+    }
+
+    static constexpr const char * units_to_string(op_type value) {
+      switch (value) {
+        case op_type::current: return "mA";
+        case op_type::voltage: return "mV";
+        case op_type::power:   return "mW";
+        default: return "unknown";
+      }
+    }
   }; // struct config
 
   // Format of the MASK/ENABLE register (06h)
