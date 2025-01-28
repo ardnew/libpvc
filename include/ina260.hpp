@@ -3,10 +3,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
+#include <array>
+#include <string_view>
 
 #include "pvc/internal/util.hpp"
 
 using namespace std::literals;
+using namespace std::literals::string_view_literals;
 
 namespace ina260 {
 
@@ -21,6 +24,7 @@ namespace ina260 {
     1000000U, //   1.00 MHz · fast mode plus (Fm+)
     2940000U  //   2.94 MHz · high-speed mode (Hs)
   );
+
   // Units of measurement / values of LSB / units of least precision (ULP)
   constexpr auto lsb_current =  1.25;
   constexpr auto lsb_voltage =  1.25;
@@ -42,7 +46,41 @@ namespace ina260 {
   constexpr std::uint8_t  default_revision = 0x00;
   constexpr std::uint16_t default_deviceid = 0x227;
 
-  // Format of the CONFIGURATION register (00h)22
+  template <typename K, typename V>
+  using pair_type = std::pair<K, V>;
+
+  template <typename K, typename V, std::size_t N>
+  using pairs_type = std::array<pair_type<K, V>, N>;
+
+  template <typename K, typename V, std::size_t N>
+  constexpr K key_of_value(
+    V value,
+    const pairs_type<K, V, N> &mapping,
+    const K &default_key
+  ) {
+    for (const auto &[key, val] : mapping) {
+      if (val == value) {
+        return key;
+      }
+    }
+    return default_key;
+  }
+
+  template <typename K, typename V, std::size_t N>
+  constexpr V const &value_of_key(
+    K value,
+    const pairs_type<K, V, N> &mapping,
+    const V &default_value
+  ) {
+    for (const auto &[key, val] : mapping) {
+      if (key == value) {
+        return val;
+      }
+    }
+    return default_value;
+  }
+
+  // Format of the CONFIGURATION register (00h)
   struct config {
 
     // Which measurements are performed for each conversion.
@@ -53,11 +91,82 @@ namespace ina260 {
       power    = 0x03, // = 3 (0b011) -- default
     };
 
+    static constexpr pairs_type<op_type, std::string_view, 4> const op_type_mapping = {{
+      {op_type::shutdown, std::string_view("shutdown")},
+      {op_type::current, std::string_view("current")},
+      {op_type::voltage, std::string_view("voltage")},
+      {op_type::power, std::string_view("power")}
+    }};
+
+    template <typename T>
+    static constexpr op_type to_op_type(T value) {
+      using underlying = std::underlying_type_t<op_type>;
+      return static_cast<op_type>(static_cast<underlying>(value));
+    }
+
+    static constexpr op_type to_op_type(std::string_view value) {
+      return key_of_value(value, op_type_mapping, op_type::shutdown);
+    }
+
+    static constexpr const std::string_view value_of_key(const op_type &value) {
+      return ina260::value_of_key(
+        value, op_type_mapping, std::string_view("unknown")
+      );
+    }
+
+    static constexpr const std::string_view to_base_units(op_type value) {
+      static constexpr pairs_type<op_type, std::string_view, 3> const units_mapping = {{
+        {op_type::current, "A"},
+        {op_type::voltage, "V"},
+        {op_type::power, "W"}
+      }};
+      return ina260::value_of_key(
+        value, units_mapping, std::string_view("unknown")
+      );
+    }
+
+    // Return a string representation of the default measurement units.
+    // This returns the same units as to_base_units,
+    // but with the sensor's native units prefix.
+    static constexpr const std::string to_units(op_type value) {
+      static constexpr std::string_view const &prefix = "m";
+      auto const &units = to_base_units(value);
+      if (units == "unknown") { return std::string(units); }
+      return std::string(prefix) + std::string(units);
+    }
+
+    template <op_type enabled = op_type::power>
+    static constexpr bool is_enabled(op_type value) {
+      return static_cast<std::underlying_type_t<op_type>>(value) &
+        static_cast<std::underlying_type_t<op_type>>(enabled);
+    }
+
     // How measurements should be performed and updated in internal registers.
     enum class op_mode : std::uint8_t {
       triggered  = 0x00, // = 0 (0b000)
       continuous = 0x01, // = 1 (0b001) -- default
     };
+
+    static constexpr pairs_type<op_mode, std::string_view, 2> const op_mode_mapping = {{
+      {op_mode::triggered, std::string_view("triggered")},
+      {op_mode::continuous, std::string_view("continuous")}
+    }};
+
+    template <typename T>
+    static constexpr op_mode to_op_mode(T value) {
+      using underlying = std::underlying_type_t<op_mode>;
+      return static_cast<op_mode>(static_cast<underlying>(value));
+    }
+
+    static constexpr op_mode to_op_mode(std::string_view value) {
+      return key_of_value(value, op_mode_mapping, op_mode::continuous);
+    }
+
+    static constexpr const std::string_view value_of_key(const op_mode &value) {
+      return ina260::value_of_key(
+        value, op_mode_mapping, std::string_view("unknown")
+      );
+    }
 
     // ADC conversion time for the voltage and current measurements.
     enum class adc_time : std::uint8_t {
@@ -71,6 +180,33 @@ namespace ina260 {
       ms8p244 = 0x07, // = 7 (0b111)
     };
 
+    static constexpr pairs_type<adc_time, std::string_view, 8> const adc_time_mapping = {{
+      {adc_time::us140, std::string_view("140 µs")},
+      {adc_time::us204, std::string_view("204 µs")},
+      {adc_time::us332, std::string_view("332 µs")},
+      {adc_time::us588, std::string_view("588 µs")},
+      {adc_time::ms1p1, std::string_view("1.1 ms")},
+      {adc_time::ms2p116, std::string_view("2.116 ms")},
+      {adc_time::ms4p156, std::string_view("4.156 ms")},
+      {adc_time::ms8p244, std::string_view("8.244 ms")}
+    }};
+
+    template <typename T>
+    static constexpr adc_time to_adc_time(T value) {
+      using underlying = std::underlying_type_t<adc_time>;
+      return static_cast<adc_time>(static_cast<underlying>(value));
+    }
+
+    static constexpr adc_time to_adc_time(std::string_view value) {
+      return key_of_value(value, adc_time_mapping, adc_time::us140);
+    }
+
+    static constexpr const std::string_view value_of_key(const adc_time &value) {
+      return ina260::value_of_key(
+        value, adc_time_mapping, std::string_view("unknown")
+      );
+    }
+
     // Number of samples that are collected and averaged.
     enum class adc_count : std::uint8_t {
       n1    = 0x00, // = 0 (0b000) -- default
@@ -82,6 +218,33 @@ namespace ina260 {
       n512  = 0x06, // = 6 (0b110)
       n1024 = 0x07, // = 7 (0b111)
     };
+
+    static constexpr pairs_type<adc_count, std::string_view, 8> const adc_count_mapping = {{
+      {adc_count::n1, std::string_view("1")},
+      {adc_count::n4, std::string_view("4")},
+      {adc_count::n16, std::string_view("16")},
+      {adc_count::n64, std::string_view("64")},
+      {adc_count::n128, std::string_view("128")},
+      {adc_count::n256, std::string_view("256")},
+      {adc_count::n512, std::string_view("512")},
+      {adc_count::n1024, std::string_view("1024")}
+    }};
+
+    template <typename T>
+    static constexpr adc_count to_adc_count(T value) {
+      using underlying = std::underlying_type_t<adc_count>;
+      return static_cast<adc_count>(static_cast<underlying>(value));
+    }
+
+    static constexpr adc_count to_adc_count(std::string_view value) {
+      return key_of_value(value, adc_count_mapping, adc_count::n1);
+    }
+
+    static constexpr const std::string_view value_of_key(const adc_count &value) {
+      return ina260::value_of_key(
+        value, adc_count_mapping, std::string_view("unknown")
+      );
+    }
 
     union alignas(std::uint16_t) {
       std::uint16_t u16;
@@ -119,62 +282,8 @@ namespace ina260 {
         resv(0),
         reset(reset) {}
 
-    virtual ~config() {}
+    virtual ~config() = default;
 
-    static constexpr const char * to_string(const op_type &value) {
-      switch (value) {
-        case op_type::shutdown: return "shutdown";
-        case op_type::current:  return "current";
-        case op_type::voltage:  return "voltage";
-        case op_type::power:    return "power";
-        default: return "unknown";
-      }
-    }
-
-    static constexpr const char * to_string(const op_mode &value) {
-      switch (value) {
-        case op_mode::triggered:  return "triggered";
-        case op_mode::continuous: return "continuous";
-        default: return "unknown";
-      }
-    }
-
-    static constexpr const char * to_string(const adc_time &value) {
-      switch (value) {
-        case adc_time::us140:    return "140 µs";
-        case adc_time::us204:    return "204 µs";
-        case adc_time::us332:    return "332 µs";
-        case adc_time::us588:    return "588 µs";
-        case adc_time::ms1p1:    return "1.1 ms";
-        case adc_time::ms2p116:  return "2.116 ms";
-        case adc_time::ms4p156:  return "4.156 ms";
-        case adc_time::ms8p244:  return "8.244 ms";
-        default: return "unknown";
-      }
-    }
-
-    static constexpr const char * to_string(const adc_count &value) {
-      switch (value) {
-        case adc_count::n1:    return "1x";
-        case adc_count::n4:    return "4x";
-        case adc_count::n16:   return "16x";
-        case adc_count::n64:   return "64x";
-        case adc_count::n128:  return "128x";
-        case adc_count::n256:  return "256x";
-        case adc_count::n512:  return "512x";
-        case adc_count::n1024: return "1024x";
-        default: return "unknown";
-      }
-    }
-
-    static constexpr const char * units_to_string(op_type value) {
-      switch (value) {
-        case op_type::current: return "mA";
-        case op_type::voltage: return "mV";
-        case op_type::power:   return "mW";
-        default: return "unknown";
-      }
-    }
   }; // struct config
 
   // Format of the MASK/ENABLE register (06h)
@@ -183,18 +292,18 @@ namespace ina260 {
       std::uint16_t u16;
       #pragma pack(push, 1)
       struct {
-          std::uint8_t  alert_latch_enable : 1; //  0
-          std::uint8_t      alert_polarity : 1; //  1
-          std::uint8_t       math_overflow : 1; //  2
-          std::uint8_t    conversion_ready : 1; //  3
-          std::uint8_t alert_function_flag : 1; //  4
-          std::uint8_t                resv : 5; //  5 —  9
-          std::uint8_t    alert_conversion : 1; // 10
-          std::uint8_t    alert_over_power : 1; // 11
-          std::uint8_t alert_under_voltage : 1; // 12
-          std::uint8_t  alert_over_voltage : 1; // 13
-          std::uint8_t alert_under_current : 1; // 14
-          std::uint8_t  alert_over_current : 1; // 15
+        std::uint8_t  alert_latch_enable : 1; //  0
+        std::uint8_t      alert_polarity : 1; //  1
+        std::uint8_t       math_overflow : 1; //  2
+        std::uint8_t    conversion_ready : 1; //  3
+        std::uint8_t alert_function_flag : 1; //  4
+        std::uint8_t                resv : 5; //  5 —  9
+        std::uint8_t    alert_conversion : 1; // 10
+        std::uint8_t    alert_over_power : 1; // 11
+        std::uint8_t alert_under_voltage : 1; // 12
+        std::uint8_t  alert_over_voltage : 1; // 13
+        std::uint8_t alert_under_current : 1; // 14
+        std::uint8_t  alert_over_current : 1; // 15
       };
       #pragma pack(pop)
     };
@@ -230,7 +339,7 @@ namespace ina260 {
         alert_under_current(alert_under_current),
         alert_over_current(alert_over_current) {}
 
-    virtual ~masken() {}
+    virtual ~masken() = default;
 
   }; // struct masken
 
@@ -255,7 +364,7 @@ namespace ina260 {
       const std::uint16_t limit = 0x0000)
       : limit(limit) {}
 
-    virtual ~alimit() {}
+    virtual ~alimit() = default;
 
   }; // struct alimit
 
@@ -283,7 +392,7 @@ namespace ina260 {
       : revision(revision),
         deviceid(deviceid) {}
 
-    virtual ~device() {}
+    virtual ~device() = default;
 
     constexpr bool operator==(std::uint8_t (&p)[sizeof(u16)]) const {
       for (std::size_t i = 0; i < sizeof(u16); ++i) {
